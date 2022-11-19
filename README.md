@@ -1,11 +1,11 @@
-# Algorand Auction Demo
+# Afrovalley-Trade Exchange Demo
 
-This demo is an on-chain Stock exchange using smart contracts on the Algorand blockchain.
+This demo is an on-chain Farm Stock exchange using smart contracts on the Algorand blockchain.
 
 ## Usage
 
 The file `exchange/operations.py` provides a set of functions that can be used to create and interact
-with exchanges. See that file for documentation.
+with stocks. See that file for documentation.
 
 ## Development Setup
 
