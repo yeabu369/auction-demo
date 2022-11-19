@@ -1,9 +1,8 @@
 from pyteal import *
 
-
 def approval_program():
     seller_key = Bytes("seller")
-    nft_id_key = Bytes("nft_id")
+    stock_id_key = Bytes("stock_id")
     start_time_key = Bytes("start")
     end_time_key = Bytes("end")
     reserve_amount_key = Bytes("reserve_amount")
@@ -13,7 +12,7 @@ def approval_program():
     lead_bid_account_key = Bytes("bid_account")
 
     @Subroutine(TealType.none)
-    def closeNFTTo(assetID: Expr, account: Expr) -> Expr:
+    def closeStockTo(assetID: Expr, account: Expr) -> Expr:
         asset_holding = AssetHolding.balance(
             Global.current_application_address(), assetID
         )
@@ -67,7 +66,7 @@ def approval_program():
     on_create_end_time = Btoi(Txn.application_args[3])
     on_create = Seq(
         App.globalPut(seller_key, Txn.application_args[0]),
-        App.globalPut(nft_id_key, Btoi(Txn.application_args[1])),
+        App.globalPut(stock_id_key, Btoi(Txn.application_args[1])),
         App.globalPut(start_time_key, on_create_start_time),
         App.globalPut(end_time_key, on_create_end_time),
         App.globalPut(reserve_amount_key, Btoi(Txn.application_args[4])),
@@ -77,7 +76,7 @@ def approval_program():
             And(
                 Global.latest_timestamp() < on_create_start_time,
                 on_create_start_time < on_create_end_time,
-                # TODO: should we impose a maximum auction length?
+                # TODO: should we impose a maximum exchange length?
             )
         ),
         Approve(),
@@ -85,13 +84,13 @@ def approval_program():
 
     on_setup = Seq(
         Assert(Global.latest_timestamp() < App.globalGet(start_time_key)),
-        # opt into NFT asset -- because you can't opt in if you're already opted in, this is what
+        # opt into Stock asset -- because you can't opt in if you're already opted in, this is what
         # we'll use to make sure the contract has been set up
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
             {
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.xfer_asset: App.globalGet(nft_id_key),
+                TxnField.xfer_asset: App.globalGet(stock_id_key),
                 TxnField.asset_receiver: Global.current_application_address(),
             }
         ),
@@ -100,19 +99,19 @@ def approval_program():
     )
 
     on_bid_txn_index = Txn.group_index() - Int(1)
-    on_bid_nft_holding = AssetHolding.balance(
-        Global.current_application_address(), App.globalGet(nft_id_key)
+    on_bid_stock_holding = AssetHolding.balance(
+        Global.current_application_address(), App.globalGet(stock_id_key)
     )
     on_bid = Seq(
-        on_bid_nft_holding,
+        on_bid_stock_holding,
         Assert(
             And(
-                # the auction has been set up
-                on_bid_nft_holding.hasValue(),
-                on_bid_nft_holding.value() > Int(0),
-                # the auction has started
+                # the exchange has been set up
+                on_bid_stock_holding.hasValue(),
+                on_bid_stock_holding.value() > Int(0),
+                # the exchange has started
                 App.globalGet(start_time_key) <= Global.latest_timestamp(),
-                # the auction has not ended
+                # the exchange has not ended
                 Global.latest_timestamp() < App.globalGet(end_time_key),
                 # the actual bid payment is before the app call
                 Gtxn[on_bid_txn_index].type_enum() == TxnType.Payment,
@@ -151,24 +150,24 @@ def approval_program():
     on_delete = Seq(
         If(Global.latest_timestamp() < App.globalGet(start_time_key)).Then(
             Seq(
-                # the auction has not yet started, it's ok to delete
+                # the exchange has not yet started, it's ok to delete
                 Assert(
                     Or(
-                        # sender must either be the seller or the auction creator
+                        # sender must either be the seller or the exchange creator
                         Txn.sender() == App.globalGet(seller_key),
                         Txn.sender() == Global.creator_address(),
                     )
                 ),
-                # if the auction contract account has opted into the nft, close it out
-                closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key)),
-                # if the auction contract still has funds, send them all to the seller
+                # if the exchange contract account has opted into the stock, close it out
+                closeStockTo(App.globalGet(stock_id_key), App.globalGet(seller_key)),
+                # if the exchange contract still has funds, send them all to the seller
                 closeAccountTo(App.globalGet(seller_key)),
                 Approve(),
             )
         ),
         If(App.globalGet(end_time_key) <= Global.latest_timestamp()).Then(
             Seq(
-                # the auction has ended, pay out assets
+                # the exchange has ended, pay out assets
                 If(App.globalGet(lead_bid_account_key) != Global.zero_address())
                 .Then(
                     If(
@@ -176,18 +175,18 @@ def approval_program():
                         >= App.globalGet(reserve_amount_key)
                     )
                     .Then(
-                        # the auction was successful: send lead bid account the nft
-                        closeNFTTo(
-                            App.globalGet(nft_id_key),
+                        # the exchange was successful: send lead bid account the stock
+                        closeStockTo(
+                            App.globalGet(stock_id_key),
                             App.globalGet(lead_bid_account_key),
                         )
                     )
                     .Else(
                         Seq(
-                            # the auction was not successful because the reserve was not met: return
-                            # the nft to the seller and repay the lead bidder
-                            closeNFTTo(
-                                App.globalGet(nft_id_key), App.globalGet(seller_key)
+                            # the exchange was not successful because the reserve was not met: return
+                            # the stock to the seller and repay the lead bidder
+                            closeStockTo(
+                                App.globalGet(stock_id_key), App.globalGet(seller_key)
                             ),
                             repayPreviousLeadBidder(
                                 App.globalGet(lead_bid_account_key),
@@ -197,8 +196,8 @@ def approval_program():
                     )
                 )
                 .Else(
-                    # the auction was not successful because no bids were placed: return the nft to the seller
-                    closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key))
+                    # the exchange was not successful because no bids were placed: return the stock to the seller
+                    closeStockTo(App.globalGet(stock_id_key), App.globalGet(seller_key))
                 ),
                 # send remaining funds to the seller
                 closeAccountTo(App.globalGet(seller_key)),
@@ -233,10 +232,10 @@ def clear_state_program():
 
 
 if __name__ == "__main__":
-    with open("auction_approval.teal", "w") as f:
+    with open("exchange_approval.teal", "w") as f:
         compiled = compileTeal(approval_program(), mode=Mode.Application, version=5)
         f.write(compiled)
 
-    with open("auction_clear_state.teal", "w") as f:
+    with open("exchange_clear_state.teal", "w") as f:
         compiled = compileTeal(clear_state_program(), mode=Mode.Application, version=5)
         f.write(compiled)

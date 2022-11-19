@@ -27,7 +27,6 @@ class PendingTxnResponse:
         self.innerTxns: List[Any] = response.get("inner-txns", [])
         self.logs: List[bytes] = [b64decode(l) for l in response.get("logs", [])]
 
-
 def waitForTransaction(
     client: AlgodClient, txID: str, timeout: int = 10
 ) -> PendingTxnResponse:

@@ -2,75 +2,75 @@ from time import time, sleep
 
 from algosdk import account, encoding
 from algosdk.logic import get_application_address
-from auction.operations import createAuctionApp, setupAuctionApp, placeBid, closeAuction
-from auction.util import (
+from exchange.operations import createExchangeApp, setupExchangeApp, placeBid, closeTrade
+from exchange.util import (
     getBalances,
     getAppGlobalState,
     getLastBlockTimestamp,
 )
-from auction.testing.setup import getAlgodClient
-from auction.testing.resources import (
+from exchange.testing.setup import getAlgodClient
+from exchange.testing.resources import (
     getTemporaryAccount,
     optInToAsset,
-    createDummyAsset,
+    createDummyStock,
 )
 
 
-def simple_auction():
+def simple_farm_stock_trade():
     client = getAlgodClient()
 
     print("Generating temporary accounts...")
-    creator = getTemporaryAccount(client)
+    farmer = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
-    bidder = getTemporaryAccount(client)
+    buyer = getTemporaryAccount(client)
 
-    print("Alice (seller account):", seller.getAddress())
-    print("Bob (auction creator account):", creator.getAddress())
-    print("Carla (bidder account)", bidder.getAddress(), "\n")
+    print("Abebe (seller account):", seller.getAddress())
+    print("Kebede (exchange farmer account):", farmer.getAddress())
+    print("Chala (buyer account)", buyer.getAddress(), "\n")
 
-    print("Alice is generating an example NFT...")
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
-    print("The NFT ID is", nftID)
-    print("Alice's balances:", getBalances(client, seller.getAddress()), "\n")
+    print("Abebe is generating an example stock...")
+    stockAmount = 1
+    stockID = createDummyStock(client, stockAmount, seller)
+    print("The Stock ID is", stockID)
+    print("Abebe's balances:", getBalances(client, seller.getAddress()), "\n")
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
-    print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
-    appID = createAuctionApp(
+    print("Kebede is creating an exchange that lasts 30 seconds to exchange off the stock...")
+    appID = createExchangeApp(
         client=client,
-        sender=creator,
+        sender=farmer,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
     print(
-        "Done. The auction app ID is",
+        "Done. The exchange app ID is",
         appID,
         "and the escrow account is",
         get_application_address(appID),
         "\n",
     )
 
-    print("Alice is setting up and funding NFT auction...")
-    setupAuctionApp(
+    print("Abebe is setting up and funding stock exchange...")
+    setupExchangeApp(
         client=client,
         appID=appID,
-        funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        funder=farmer,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
     print("Done\n")
 
     sellerBalancesBefore = getBalances(client, seller.getAddress())
     sellerAlgosBefore = sellerBalancesBefore[0]
-    print("Alice's balances:", sellerBalancesBefore)
+    print("Abebe's balances:", sellerBalancesBefore)
 
     _, lastRoundTime = getLastBlockTimestamp(client)
     if lastRoundTime < startTime + 5:
@@ -79,44 +79,44 @@ def simple_auction():
     print("Auction escrow balances:", actualAppBalancesBefore, "\n")
 
     bidAmount = reserve
-    bidderBalancesBefore = getBalances(client, bidder.getAddress())
-    bidderAlgosBefore = bidderBalancesBefore[0]
-    print("Carla wants to bid on NFT, her balances:", bidderBalancesBefore)
-    print("Carla is placing bid for", bidAmount, "microAlgos")
+    buyerBalancesBefore = getBalances(client, buyer.getAddress())
+    buyerAlgosBefore = buyerBalancesBefore[0]
+    print("Chala wants to bid on stock, her balances:", buyerBalancesBefore)
+    print("Chala is placing bid for", bidAmount, "microAlgos")
 
-    placeBid(client=client, appID=appID, bidder=bidder, bidAmount=bidAmount)
+    placeBid(client=client, appID=appID, bidder=buyer, bidAmount=bidAmount)
 
-    print("Carla is opting into NFT with ID", nftID)
+    print("Chala is opting into stock with ID", stockID)
 
-    optInToAsset(client, nftID, bidder)
+    optInToAsset(client, stockID, buyer)
 
     print("Done\n")
 
     _, lastRoundTime = getLastBlockTimestamp(client)
     if lastRoundTime < endTime + 5:
         waitTime = endTime + 5 - lastRoundTime
-        print("Waiting {} seconds for the auction to finish\n".format(waitTime))
+        print("Waiting {} seconds for the exchange to finish\n".format(waitTime))
         sleep(waitTime)
 
-    print("Alice is closing out the auction\n")
-    closeAuction(client, appID, seller)
+    print("Abebe is closing out the exchange\n")
+    closeTrade(client, appID, seller)
 
     actualAppBalances = getBalances(client, get_application_address(appID))
     expectedAppBalances = {0: 0}
-    print("The auction escrow now holds the following:", actualAppBalances)
+    print("The exchange escrow now holds the following:", actualAppBalances)
     assert actualAppBalances == expectedAppBalances
 
-    bidderNftBalance = getBalances(client, bidder.getAddress())[nftID]
-    assert bidderNftBalance == nftAmount
+    buyerstockBalance = getBalances(client, buyer.getAddress())[stockID]
+    assert buyerstockBalance == stockAmount
 
     actualSellerBalances = getBalances(client, seller.getAddress())
-    print("Alice's balances after auction: ", actualSellerBalances, " Algos")
-    actualBidderBalances = getBalances(client, bidder.getAddress())
-    print("Carla's balances after auction: ", actualBidderBalances, " Algos")
+    print("Abebe's balances after exchange: ", actualSellerBalances, " Algos")
+    actualbuyerBalances = getBalances(client, buyer.getAddress())
+    print("Chala's balances after exchange: ", actualbuyerBalances, " Algos")
     assert len(actualSellerBalances) == 2
     # seller should receive the bid amount, minus the txn fee
     assert actualSellerBalances[0] >= sellerAlgosBefore + bidAmount - 1_000
-    assert actualSellerBalances[nftID] == 0
+    assert actualSellerBalances[stockID] == 0
 
 
-simple_auction()
+simple_farm_stock_trade()

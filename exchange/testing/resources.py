@@ -87,7 +87,7 @@ def optInToAsset(
     return waitForTransaction(client, signedTxn.get_txid())
 
 
-def createDummyAsset(client: AlgodClient, total: int, account: Account = None) -> int:
+def createDummyStock(client: AlgodClient, total: int, account: Account = None) -> int:
     if account is None:
         account = getTemporaryAccount(client)
 

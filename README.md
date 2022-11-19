@@ -1,11 +1,11 @@
 # Algorand Auction Demo
 
-This demo is an on-chain NFT auction using smart contracts on the Algorand blockchain.
+This demo is an on-chain Stock exchange using smart contracts on the Algorand blockchain.
 
 ## Usage
 
-The file `auction/operations.py` provides a set of functions that can be used to create and interact
-with auctions. See that file for documentation.
+The file `exchange/operations.py` provides a set of functions that can be used to create and interact
+with exchanges. See that file for documentation.
 
 ## Development Setup
 

@@ -20,7 +20,7 @@ CLEAR_STATE_PROGRAM = b""
 
 
 def getContracts(client: AlgodClient) -> Tuple[bytes, bytes]:
-    """Get the compiled TEAL contracts for the auction.
+    """Get the compiled TEAL contracts for the exchange.
 
     Args:
         client: An algod client that has the ability to compile TEAL programs.
@@ -39,37 +39,37 @@ def getContracts(client: AlgodClient) -> Tuple[bytes, bytes]:
     return APPROVAL_PROGRAM, CLEAR_STATE_PROGRAM
 
 
-def createAuctionApp(
+def createExchangeApp(
     client: AlgodClient,
     sender: Account,
     seller: str,
-    nftID: int,
+    stockID: int,
     startTime: int,
     endTime: int,
     reserve: int,
     minBidIncrement: int,
 ) -> int:
-    """Create a new auction.
+    """Create a new exchange.
 
     Args:
         client: An algod client.
-        sender: The account that will create the auction application.
-        seller: The address of the seller that currently holds the NFT being
-            auctioned.
-        nftID: The ID of the NFT being auctioned.
-        startTime: A UNIX timestamp representing the start time of the auction.
+        sender: The account that will create the exchange application.
+        seller: The address of the seller that currently holds the Stock being
+            exchanged.
+        stockID: The ID of the Stock being exchanged.
+        startTime: A UNIX timestamp representing the start time of the exchange.
             This must be greater than the current UNIX timestamp.
-        endTime: A UNIX timestamp representing the end time of the auction. This
+        endTime: A UNIX timestamp representing the end time of the exchange. This
             must be greater than startTime.
-        reserve: The reserve amount of the auction. If the auction ends without
-            a bid that is equal to or greater than this amount, the auction will
+        reserve: The reserve amount of the exchange. If the exchange ends without
+            a bid that is equal to or greater than this amount, the exchange will
             fail, meaning the bid amount will be refunded to the lead bidder and
-            the NFT will return to the seller.
+            the Stock will return to the seller.
         minBidIncrement: The minimum different required between a new bid and
             the current leading bid.
 
     Returns:
-        The ID of the newly created auction app.
+        The ID of the newly created exchange app.
     """
     approval, clear = getContracts(client)
 
@@ -78,7 +78,7 @@ def createAuctionApp(
 
     app_args = [
         encoding.decode_address(seller),
-        nftID.to_bytes(8, "big"),
+        stockID.to_bytes(8, "big"),
         startTime.to_bytes(8, "big"),
         endTime.to_bytes(8, "big"),
         reserve.to_bytes(8, "big"),
@@ -105,32 +105,32 @@ def createAuctionApp(
     return response.applicationIndex
 
 
-def setupAuctionApp(
+def setupExchangeApp(
     client: AlgodClient,
     appID: int,
     funder: Account,
-    nftHolder: Account,
-    nftID: int,
-    nftAmount: int,
+    stockHolder: Account,
+    stockID: int,
+    stockAmount: int,
 ) -> None:
-    """Finish setting up an auction.
+    """Finish setting up an exchange.
 
-    This operation funds the app auction escrow account, opts that account into
-    the NFT, and sends the NFT to the escrow account, all in one atomic
-    transaction group. The auction must not have started yet.
+    This operation funds the app exchange escrow account, opts that account into
+    the Stock, and sends the Stock to the escrow account, all in one atomic
+    transaction group. The exchange must not have started yet.
 
     The escrow account requires a total of 0.203 Algos for funding. See the code
     below for a breakdown of this amount.
 
     Args:
         client: An algod client.
-        appID: The app ID of the auction.
+        appID: The app ID of the exchange.
         funder: The account providing the funding for the escrow account.
-        nftHolder: The account holding the NFT.
-        nftID: The NFT ID.
-        nftAmount: The NFT amount being auctioned. Some NFTs has a total supply
-            of 1, while others are fractional NFTs with a greater total supply,
-            so use a value that makes sense for the NFT being auctioned.
+        stockHolder: The account holding the Stock.
+        stockID: The Stock ID.
+        stockAmount: The Stock amount being exchanged. Some Stocks has a total supply
+            of 1, while others are fractional Stocks with a greater total supply,
+            so use a value that makes sense for the Stock being exchanged.
     """
     appAddr = get_application_address(appID)
 
@@ -139,7 +139,7 @@ def setupAuctionApp(
     fundingAmount = (
         # min account balance
         100_000
-        # additional min balance to opt into NFT
+        # additional min balance to opt into Stock
         + 100_000
         # 3 * min txn fee
         + 3 * 1_000
@@ -157,42 +157,42 @@ def setupAuctionApp(
         index=appID,
         on_complete=transaction.OnComplete.NoOpOC,
         app_args=[b"setup"],
-        foreign_assets=[nftID],
+        foreign_assets=[stockID],
         sp=suggestedParams,
     )
 
-    fundNftTxn = transaction.AssetTransferTxn(
-        sender=nftHolder.getAddress(),
+    fundStockTxn = transaction.AssetTransferTxn(
+        sender=stockHolder.getAddress(),
         receiver=appAddr,
-        index=nftID,
-        amt=nftAmount,
+        index=stockID,
+        amt=stockAmount,
         sp=suggestedParams,
     )
 
-    transaction.assign_group_id([fundAppTxn, setupTxn, fundNftTxn])
+    transaction.assign_group_id([fundAppTxn, setupTxn, fundStockTxn])
 
     signedFundAppTxn = fundAppTxn.sign(funder.getPrivateKey())
     signedSetupTxn = setupTxn.sign(funder.getPrivateKey())
-    signedFundNftTxn = fundNftTxn.sign(nftHolder.getPrivateKey())
+    signedFundStockTxn = fundStockTxn.sign(stockHolder.getPrivateKey())
 
-    client.send_transactions([signedFundAppTxn, signedSetupTxn, signedFundNftTxn])
+    client.send_transactions([signedFundAppTxn, signedSetupTxn, signedFundStockTxn])
 
     waitForTransaction(client, signedFundAppTxn.get_txid())
 
 
 def placeBid(client: AlgodClient, appID: int, bidder: Account, bidAmount: int) -> None:
-    """Place a bid on an active auction.
+    """Place a bid on an active exchange.
 
     Args:
         client: An Algod client.
-        appID: The app ID of the auction.
+        appID: The app ID of the exchange.
         bidder: The account providing the bid.
         bidAmount: The amount of the bid.
     """
     appAddr = get_application_address(appID)
     appGlobalState = getAppGlobalState(client, appID)
 
-    nftID = appGlobalState[b"nft_id"]
+    stockID = appGlobalState[b"stock_id"]
 
     if any(appGlobalState[b"bid_account"]):
         # if "bid_account" is not the zero address
@@ -214,7 +214,7 @@ def placeBid(client: AlgodClient, appID: int, bidder: Account, bidAmount: int) -
         index=appID,
         on_complete=transaction.OnComplete.NoOpOC,
         app_args=[b"bid"],
-        foreign_assets=[nftID],
+        foreign_assets=[stockID],
         # must include the previous lead bidder here to the app can refund that bidder's payment
         accounts=[prevBidLeader] if prevBidLeader is not None else [],
         sp=suggestedParams,
@@ -230,27 +230,27 @@ def placeBid(client: AlgodClient, appID: int, bidder: Account, bidAmount: int) -
     waitForTransaction(client, appCallTxn.get_txid())
 
 
-def closeAuction(client: AlgodClient, appID: int, closer: Account):
-    """Close an auction.
+def closeTrade(client: AlgodClient, appID: int, closer: Account):
+    """Close an exchange.
 
-    This action can only happen before an auction has begun, in which case it is
-    cancelled, or after an auction has ended.
+    This action can only happen before an exchange has begun, in which case it is
+    cancelled, or after an exchange has ended.
 
-    If called after the auction has ended and the auction was successful, the
-    NFT is transferred to the winning bidder and the auction proceeds are
-    transferred to the seller. If the auction was not successful, the NFT and
+    If called after the exchange has ended and the exchange was successful, the
+    Stock is transferred to the winning bidder and the exchange proceeds are
+    transferred to the seller. If the exchange was not successful, the Stock and
     all funds are transferred to the seller.
 
     Args:
         client: An Algod client.
-        appID: The app ID of the auction.
+        appID: The app ID of the exchange.
         closer: The account initiating the close transaction. This must be
-            either the seller or auction creator if you wish to close the
-            auction before it starts. Otherwise, this can be any account.
+            either the seller or exchange creator if you wish to close the
+            exchange before it starts. Otherwise, this can be any account.
     """
     appGlobalState = getAppGlobalState(client, appID)
 
-    nftID = appGlobalState[b"nft_id"]
+    stockID = appGlobalState[b"stock_id"]
 
     accounts: List[str] = [encoding.encode_address(appGlobalState[b"seller"])]
 
@@ -262,7 +262,7 @@ def closeAuction(client: AlgodClient, appID: int, closer: Account):
         sender=closer.getAddress(),
         index=appID,
         accounts=accounts,
-        foreign_assets=[nftID],
+        foreign_assets=[stockID],
         sp=client.suggested_params(),
     )
     signedDeleteTxn = deleteTxn.sign(closer.getPrivateKey())

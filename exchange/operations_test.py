@@ -5,7 +5,7 @@ import pytest
 from algosdk import account, encoding
 from algosdk.logic import get_application_address
 
-from .operations import createAuctionApp, setupAuctionApp, placeBid, closeAuction
+from .operations import createExchangeApp, setupExchangeApp, placeBid, closeAuction
 from .util import getBalances, getAppGlobalState, getLastBlockTimestamp
 from .testing.setup import getAlgodClient
 from .testing.resources import getTemporaryAccount, optInToAsset, createDummyAsset
@@ -17,17 +17,17 @@ def test_create():
     creator = getTemporaryAccount(client)
     _, seller_addr = account.generate_account()  # random address
 
-    nftID = 1  # fake ID
+    stockID = 1  # fake ID
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller_addr,
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
@@ -37,7 +37,7 @@ def test_create():
     actual = getAppGlobalState(client, appID)
     expected = {
         b"seller": encoding.decode_address(seller_addr),
-        b"nft_id": nftID,
+        b"stock_id": stockID,
         b"start": startTime,
         b"end": endTime,
         b"reserve_amount": reserve,
@@ -54,38 +54,38 @@ def test_setup():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     actualState = getAppGlobalState(client, appID)
     expectedState = {
         b"seller": encoding.decode_address(seller.getAddress()),
-        b"nft_id": nftID,
+        b"stock_id": stockID,
         b"start": startTime,
         b"end": endTime,
         b"reserve_amount": reserve,
@@ -96,7 +96,7 @@ def test_setup():
     assert actualState == expectedState
 
     actualBalances = getBalances(client, get_application_address(appID))
-    expectedBalances = {0: 2 * 100_000 + 2 * 1_000, nftID: nftAmount}
+    expectedBalances = {0: 2 * 100_000 + 2 * 1_000, stockID: stockAmount}
 
     assert actualBalances == expectedBalances
 
@@ -107,32 +107,32 @@ def test_first_bid_before_start():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 5 * 60  # start time is 5 minutes in the future
     endTime = startTime + 60  # end time is 1 minute after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     bidder = getTemporaryAccount(client)
@@ -151,32 +151,32 @@ def test_first_bid():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     bidder = getTemporaryAccount(client)
@@ -191,7 +191,7 @@ def test_first_bid():
     actualState = getAppGlobalState(client, appID)
     expectedState = {
         b"seller": encoding.decode_address(seller.getAddress()),
-        b"nft_id": nftID,
+        b"stock_id": stockID,
         b"start": startTime,
         b"end": endTime,
         b"reserve_amount": reserve,
@@ -204,7 +204,7 @@ def test_first_bid():
     assert actualState == expectedState
 
     actualBalances = getBalances(client, get_application_address(appID))
-    expectedBalances = {0: 2 * 100_000 + 2 * 1_000 + bidAmount, nftID: nftAmount}
+    expectedBalances = {0: 2 * 100_000 + 2 * 1_000 + bidAmount, stockID: stockAmount}
 
     assert actualBalances == expectedBalances
 
@@ -215,32 +215,32 @@ def test_second_bid():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     bidder1 = getTemporaryAccount(client)
@@ -270,7 +270,7 @@ def test_second_bid():
     actualState = getAppGlobalState(client, appID)
     expectedState = {
         b"seller": encoding.decode_address(seller.getAddress()),
-        b"nft_id": nftID,
+        b"stock_id": stockID,
         b"start": startTime,
         b"end": endTime,
         b"reserve_amount": reserve,
@@ -283,7 +283,7 @@ def test_second_bid():
     assert actualState == expectedState
 
     actualAppBalances = getBalances(client, get_application_address(appID))
-    expectedAppBalances = {0: 2 * 100_000 + 2 * 1_000 + bid2Amount, nftID: nftAmount}
+    expectedAppBalances = {0: 2 * 100_000 + 2 * 1_000 + bid2Amount, stockID: stockAmount}
 
     assert actualAppBalances == expectedAppBalances
 
@@ -299,32 +299,32 @@ def test_close_before_start():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 5 * 60  # start time is 5 minutes in the future
     endTime = startTime + 60  # end time is 1 minute after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     _, lastRoundTime = getLastBlockTimestamp(client)
@@ -337,8 +337,8 @@ def test_close_before_start():
 
     assert actualAppBalances == expectedAppBalances
 
-    sellerNftBalance = getBalances(client, seller.getAddress())[nftID]
-    assert sellerNftBalance == nftAmount
+    sellerStockBalance = getBalances(client, seller.getAddress())[stockID]
+    assert sellerStockBalance == stockAmount
 
 
 def test_close_no_bids():
@@ -347,32 +347,32 @@ def test_close_no_bids():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     _, lastRoundTime = getLastBlockTimestamp(client)
@@ -386,8 +386,8 @@ def test_close_no_bids():
 
     assert actualAppBalances == expectedAppBalances
 
-    sellerNftBalance = getBalances(client, seller.getAddress())[nftID]
-    assert sellerNftBalance == nftAmount
+    sellerStockBalance = getBalances(client, seller.getAddress())[stockID]
+    assert sellerStockBalance == stockAmount
 
 
 def test_close_reserve_not_met():
@@ -396,32 +396,32 @@ def test_close_reserve_not_met():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     bidder = getTemporaryAccount(client)
@@ -451,8 +451,8 @@ def test_close_reserve_not_met():
     # bidder should receive a refund of their bid, minus the txn fee
     assert bidderAlgosAfter - bidderAlgosBefore >= bidAmount - 1_000
 
-    sellerNftBalance = getBalances(client, seller.getAddress())[nftID]
-    assert sellerNftBalance == nftAmount
+    sellerStockBalance = getBalances(client, seller.getAddress())[stockID]
+    assert sellerStockBalance == stockAmount
 
 
 def test_close_reserve_met():
@@ -461,32 +461,32 @@ def test_close_reserve_met():
     creator = getTemporaryAccount(client)
     seller = getTemporaryAccount(client)
 
-    nftAmount = 1
-    nftID = createDummyAsset(client, nftAmount, seller)
+    stockAmount = 1
+    stockID = createDummyAsset(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
 
-    appID = createAuctionApp(
+    appID = createExchangeApp(
         client=client,
         sender=creator,
         seller=seller.getAddress(),
-        nftID=nftID,
+        stockID=stockID,
         startTime=startTime,
         endTime=endTime,
         reserve=reserve,
         minBidIncrement=increment,
     )
 
-    setupAuctionApp(
+    setupExchangeApp(
         client=client,
         appID=appID,
         funder=creator,
-        nftHolder=seller,
-        nftID=nftID,
-        nftAmount=nftAmount,
+        stockHolder=seller,
+        stockID=stockID,
+        stockAmount=stockAmount,
     )
 
     sellerAlgosBefore = getBalances(client, seller.getAddress())[0]
@@ -500,7 +500,7 @@ def test_close_reserve_met():
     bidAmount = reserve
     placeBid(client=client, appID=appID, bidder=bidder, bidAmount=bidAmount)
 
-    optInToAsset(client, nftID, bidder)
+    optInToAsset(client, stockID, bidder)
 
     _, lastRoundTime = getLastBlockTimestamp(client)
     if lastRoundTime < endTime + 5:
@@ -513,13 +513,13 @@ def test_close_reserve_met():
 
     assert actualAppBalances == expectedAppBalances
 
-    bidderNftBalance = getBalances(client, bidder.getAddress())[nftID]
+    bidderStockBalance = getBalances(client, bidder.getAddress())[stockID]
 
-    assert bidderNftBalance == nftAmount
+    assert bidderStockBalance == stockAmount
 
     actualSellerBalances = getBalances(client, seller.getAddress())
 
     assert len(actualSellerBalances) == 2
     # seller should receive the bid amount, minus the txn fee
     assert actualSellerBalances[0] >= sellerAlgosBefore + bidAmount - 1_000
-    assert actualSellerBalances[nftID] == 0
+    assert actualSellerBalances[stockID] == 0
