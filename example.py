@@ -76,7 +76,7 @@ def simple_farm_stock_trade():
     if lastRoundTime < startTime + 5:
         sleep(startTime + 5 - lastRoundTime)
     actualAppBalancesBefore = getBalances(client, get_application_address(appID))
-    print("Auction escrow balances:", actualAppBalancesBefore, "\n")
+    print("Exchange escrow balances:", actualAppBalancesBefore, "\n")
 
     bidAmount = reserve
     buyerBalancesBefore = getBalances(client, buyer.getAddress())

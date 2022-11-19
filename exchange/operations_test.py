@@ -5,7 +5,7 @@ import pytest
 from algosdk import account, encoding
 from algosdk.logic import get_application_address
 
-from .operations import createExchangeApp, setupExchangeApp, placeBid, closeAuction
+from .operations import createExchangeApp, setupExchangeApp, placeBid, closeTrade
 from .util import getBalances, getAppGlobalState, getLastBlockTimestamp
 from .testing.setup import getAlgodClient
 from .testing.resources import getTemporaryAccount, optInToAsset, createDummyAsset
@@ -330,7 +330,7 @@ def test_close_before_start():
     _, lastRoundTime = getLastBlockTimestamp(client)
     assert lastRoundTime < startTime
 
-    closeAuction(client, appID, seller)
+    closeTrade(client, appID, seller)
 
     actualAppBalances = getBalances(client, get_application_address(appID))
     expectedAppBalances = {0: 0}
@@ -379,7 +379,7 @@ def test_close_no_bids():
     if lastRoundTime < endTime + 5:
         sleep(endTime + 5 - lastRoundTime)
 
-    closeAuction(client, appID, seller)
+    closeTrade(client, appID, seller)
 
     actualAppBalances = getBalances(client, get_application_address(appID))
     expectedAppBalances = {0: 0}
@@ -439,7 +439,7 @@ def test_close_reserve_not_met():
     if lastRoundTime < endTime + 5:
         sleep(endTime + 5 - lastRoundTime)
 
-    closeAuction(client, appID, seller)
+    closeTrade(client, appID, seller)
 
     actualAppBalances = getBalances(client, get_application_address(appID))
     expectedAppBalances = {0: 0}
@@ -506,7 +506,7 @@ def test_close_reserve_met():
     if lastRoundTime < endTime + 5:
         sleep(endTime + 5 - lastRoundTime)
 
-    closeAuction(client, appID, seller)
+    closeTrade(client, appID, seller)
 
     actualAppBalances = getBalances(client, get_application_address(appID))
     expectedAppBalances = {0: 0}
