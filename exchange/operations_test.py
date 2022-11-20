@@ -8,7 +8,7 @@ from algosdk.logic import get_application_address
 from .operations import createExchangeApp, setupExchangeApp, placeBid, closeTrade
 from .util import getBalances, getAppGlobalState, getLastBlockTimestamp
 from .testing.setup import getAlgodClient
-from .testing.resources import getTemporaryAccount, optInToAsset, createDummyAsset
+from .testing.resources import getTemporaryAccount, optInToAsset, createDummyStock
 
 
 def test_create():
@@ -55,7 +55,7 @@ def test_setup():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
@@ -108,7 +108,7 @@ def test_first_bid_before_start():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 5 * 60  # start time is 5 minutes in the future
     endTime = startTime + 60  # end time is 1 minute after start
@@ -152,7 +152,7 @@ def test_first_bid():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
@@ -216,7 +216,7 @@ def test_second_bid():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 60  # end time is 1 minute after start
@@ -300,7 +300,7 @@ def test_close_before_start():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 5 * 60  # start time is 5 minutes in the future
     endTime = startTime + 60  # end time is 1 minute after start
@@ -348,7 +348,7 @@ def test_close_no_bids():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
@@ -397,7 +397,7 @@ def test_close_reserve_not_met():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
@@ -462,7 +462,7 @@ def test_close_reserve_met():
     seller = getTemporaryAccount(client)
 
     stockAmount = 1
-    stockID = createDummyAsset(client, stockAmount, seller)
+    stockID = createDummyStock(client, stockAmount, seller)
 
     startTime = int(time()) + 10  # start time is 10 seconds in the future
     endTime = startTime + 30  # end time is 30 seconds after start
